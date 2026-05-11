@@ -11,7 +11,8 @@ app.use(express.json());
 // Secrets are accessed via process.env
 const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
 
-app.post("/chat", async (req, res) => {
+// Accept any path to avoid routing issues with Firebase Hosting rewrites
+app.post("*", async (req, res) => {
   const { messages, model } = req.body;
   const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 
