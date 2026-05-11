@@ -1,24 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Bot, User, Sparkles, Loader2, ChevronDown, Sun, Moon } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2, ChevronDown, Sun, Moon, Columns, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
 const MODELS = [
-  { id: 'deepseek-ai/deepseek-v4-pro', name: 'DeepSeek V4 Pro' },
-  { id: 'deepseek-ai/deepseek-v4-flash', name: 'DeepSeek V4 Flash' },
   { id: 'meta/llama-3.3-70b-instruct', name: 'Llama 3.3 70B' },
   { id: 'meta/llama-3.1-8b-instruct', name: 'Llama 3.1 8B' },
-  { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B' }
+  { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B' },
+  { id: 'deepseek-ai/deepseek-v4-pro', name: 'DeepSeek V4 Pro' },
+  { id: 'deepseek-ai/deepseek-v4-flash', name: 'DeepSeek V4 Flash' }
 ];
 
 function App() {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hello! I'm DeepSeek Pro. How can I help you today?" }
+    { role: 'assistant', type: 'single', content: "Hello! I'm ready. Use the toggle above to compare models side-by-side!" }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(MODELS[0].id);
+  const [compareList, setCompareList] = useState([MODELS[0].id, MODELS[1].id]);
+  const [isCompareMode, setIsCompareMode] = useState(false);
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   
@@ -47,43 +49,32 @@ function App() {
     textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
   };
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+  const toggleCompare = () => setIsCompareMode(!isCompareMode);
+
+  const toggleModelInCompare = (id) => {
+    if (compareList.includes(id)) {
+      if (compareList.length > 1) setCompareList(compareList.filter(m => m !== id));
+    } else {
+      if (compareList.length < 3) setCompareList([...compareList, id]);
+    }
   };
 
-  const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage = { role: 'user', content: input };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-    
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
-
+  const streamFromModel = async (modelId, history, msgIndex) => {
     try {
-      // Relative URL for Firebase Hosting rewrites
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content })),
-          model: selectedModel
-        }),
+        body: JSON.stringify({ messages: history, model: modelId }),
       });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to connect to backend');
-      }
+      if (!response.ok) throw new Error('Model failed');
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let aiMessageContent = '';
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
-
+      let content = '';
       let buffer = '';
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -96,15 +87,17 @@ function App() {
           if (line.startsWith('data: ')) {
             const dataStr = line.slice(6).trim();
             if (dataStr === '[DONE]') break;
-            
             try {
               const data = JSON.parse(dataStr);
-              if (data.choices?.[0]?.delta?.content) {
-                aiMessageContent += data.choices[0].delta.content;
+              const delta = data.choices?.[0]?.delta?.content || '';
+              if (delta) {
+                content += delta;
                 setMessages(prev => {
-                  const newMessages = [...prev];
-                  newMessages[newMessages.length - 1].content = aiMessageContent;
-                  return newMessages;
+                  const newMsgs = [...prev];
+                  const currentMsg = { ...newMsgs[msgIndex] };
+                  currentMsg.results = { ...currentMsg.results, [modelId]: content };
+                  newMsgs[msgIndex] = currentMsg;
+                  return newMsgs;
                 });
               }
             } catch (e) {}
@@ -112,35 +105,60 @@ function App() {
         }
       }
     } catch (error) {
-      console.error('Chat error:', error);
-      setMessages(prev => [...prev, { role: 'assistant', content: `**Error:** ${error.message}. Please check if the model is available or try a different one.` }]);
-    } finally {
-      setIsLoading(false);
+      setMessages(prev => {
+        const newMsgs = [...prev];
+        const currentMsg = { ...newMsgs[msgIndex] };
+        currentMsg.results = { ...currentMsg.results, [modelId]: `Error: ${error.message}` };
+        newMsgs[msgIndex] = currentMsg;
+        return newMsgs;
+      });
     }
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMsg = { role: 'user', content: input };
+    const currentHistory = [...messages.filter(m => m.type !== 'compare').map(m => ({ role: m.role, content: m.content || '' })), userMsg];
+    
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setIsLoading(true);
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+    const activeModels = isCompareMode ? compareList : [selectedModel];
+    const msgIndex = messages.length + 1;
+    
+    setMessages(prev => [...prev, { 
+      role: 'assistant', 
+      type: isCompareMode ? 'compare' : 'single',
+      results: activeModels.reduce((acc, id) => ({ ...acc, [id]: '' }), {})
+    }]);
+
+    await Promise.all(activeModels.map(modelId => streamFromModel(modelId, currentHistory, msgIndex)));
+    setIsLoading(false);
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isCompareMode ? 'compare-mode' : ''}`}>
       <header className="header">
         <div className="brand">
           <h1><Sparkles size={24} color="var(--accent-color)" /> DeepSeek Pro</h1>
         </div>
         
         <div className="header-actions">
-          <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle Theme">
+          <button className={`mode-toggle-btn ${isCompareMode ? 'active' : ''}`} onClick={toggleCompare} title="Compare Mode">
+            {isCompareMode ? <MessageSquare size={20} /> : <Columns size={20} />}
+          </button>
+
+          <button className="theme-toggle-btn" onClick={toggleTheme}>
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
           <div className="model-selector">
             <button className="model-btn" onClick={() => setShowModelMenu(!showModelMenu)}>
-              {MODELS.find(m => m.id === selectedModel)?.name}
+              {isCompareMode ? `${compareList.length} Models` : MODELS.find(m => m.id === selectedModel)?.name}
               <ChevronDown size={16} />
             </button>
             {showModelMenu && (
@@ -148,18 +166,20 @@ function App() {
                 {MODELS.map(model => (
                   <button 
                     key={model.id} 
-                    className={`model-option ${selectedModel === model.id ? 'active' : ''}`}
+                    className={`model-option ${isCompareMode ? (compareList.includes(model.id) ? 'active' : '') : (selectedModel === model.id ? 'active' : '')}`}
                     onClick={() => {
-                      setSelectedModel(model.id);
-                      setShowModelMenu(false);
+                      if (isCompareMode) toggleModelInCompare(model.id);
+                      else { setSelectedModel(model.id); setShowModelMenu(false); }
                     }}
                   >
+                    {isCompareMode && <input type="checkbox" checked={compareList.includes(model.id)} readOnly style={{ marginRight: '8px' }} />}
                     {model.name}
                   </button>
                 ))}
               </div>
             )}
           </div>
+          
           <div className="status-indicator">
             <div className={`dot ${isLoading ? 'active' : ''}`}></div>
             <span>{isLoading ? 'Thinking...' : 'Ready'}</span>
@@ -174,15 +194,28 @@ function App() {
               key={index}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`message ${msg.role === 'user' ? 'user' : 'ai'}`}
+              className={`message-group ${msg.role === 'user' ? 'user' : 'assistant'}`}
             >
-              <div className="message-header" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                {msg.role === 'user' ? <User size={14} /> : <Bot size={14} />}
-                <span>{msg.role === 'user' ? 'You' : 'DeepSeek'}</span>
-              </div>
-              <div className="markdown-content">
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
-              </div>
+              {msg.role === 'user' ? (
+                <div className="message user">
+                   <div className="message-header"><User size={14} /> <span>You</span></div>
+                   <div className="markdown-content">{msg.content}</div>
+                </div>
+              ) : (
+                <div className={`results-grid cols-${Object.keys(msg.results || {}).length}`}>
+                  {Object.entries(msg.results || {}).map(([modelId, content]) => (
+                    <div key={modelId} className="message ai">
+                      <div className="message-header">
+                        <Bot size={14} /> 
+                        <span>{MODELS.find(m => m.id === modelId)?.name}</span>
+                      </div>
+                      <div className="markdown-content">
+                        <ReactMarkdown>{content || (isLoading ? '...' : '')}</ReactMarkdown>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -196,8 +229,8 @@ function App() {
             rows="1"
             value={input}
             onChange={handleInput}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask me anything..."
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSubmit())}
+            placeholder="Compare models..."
           />
           <button type="submit" className="send-btn" disabled={isLoading || !input.trim()}>
             {isLoading ? <Loader2 className="animate-spin" size={20} color="#000" /> : <Send size={20} color="#000" />}
