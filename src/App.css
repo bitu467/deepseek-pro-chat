@@ -119,8 +119,14 @@ body {
 .message-group.user { align-items: flex-end; }
 
 .message {
-  max-width: 85%; padding: 14px 18px; border-radius: 16px;
-  line-height: 1.5; font-size: 0.95rem;
+  max-width: 85%; 
+  padding: 16px 22px; 
+  border-radius: 16px;
+  line-height: 1.5; 
+  font-size: 0.95rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .message.user { background: var(--message-user-bg); border: 1px solid var(--glass-border); }
@@ -140,9 +146,11 @@ body {
 }
 
 .message-header {
-  display: flex; align-items: center; gap: 6px;
-  margin-bottom: 10px; font-size: 0.75rem; color: var(--text-dim);
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px; font-size: 0.75rem; color: var(--text-dim);
   font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 8px;
 }
 
 /* Input Area */

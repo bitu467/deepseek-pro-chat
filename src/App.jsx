@@ -7,13 +7,13 @@ import './App.css';
 const MODELS = [
   { id: 'meta/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', type: 'chat' },
   { id: 'deepseek-ai/deepseek-v4-pro', name: 'DeepSeek V4 Pro', type: 'chat' },
-  { id: 'meta/llama-3.1-405b-instruct', name: 'Llama 3.1 405B', type: 'chat' },
-  { id: 'mistralai/mistral-large-2-124b', name: 'Mistral Large 2', type: 'chat' },
-  { id: 'google/gemma-2-27b-it', name: 'Gemma 2 27B', type: 'chat' },
-  { id: 'microsoft/phi-3-medium-128k-instruct', name: 'Phi-3 Medium', type: 'chat' },
+  { id: 'meta/llama-3.1-70b-instruct', name: 'Llama 3.1 70B', type: 'chat' },
+  { id: 'mistralai/mistral-large-2-instruct', name: 'Mistral Large 2', type: 'chat' },
+  { id: 'google/gemma-3-27b-it', name: 'Gemma 3 27B', type: 'chat' },
+  { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B', type: 'chat' },
   { id: 'black-forest-labs/flux-1-schnell', name: 'FLUX.1 (Image)', type: 'image' },
   { id: 'stabilityai/stable-diffusion-3-5-large', name: 'SD 3.5 (Image)', type: 'image' },
-  { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B', type: 'chat' }
+  { id: 'deepseek-ai/deepseek-v4-flash', name: 'DeepSeek V4 Flash', type: 'chat' }
 ];
 
 function App() {
