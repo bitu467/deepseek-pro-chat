@@ -26,7 +26,6 @@ function App() {
   const textareaRef = useRef(null);
 
   useEffect(() => {
-    // Apply theme class to body
     if (isDarkMode) {
       document.body.classList.remove('light-mode');
     } else {
@@ -64,7 +63,8 @@ function App() {
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
     try {
-      const response = await fetch('http://localhost:3001/api/chat', {
+      // Relative URL for Firebase Hosting rewrites
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
