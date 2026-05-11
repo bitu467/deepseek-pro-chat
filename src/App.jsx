@@ -145,7 +145,7 @@ function App() {
     <div className={`app-container ${isCompareMode ? 'compare-mode' : ''}`}>
       <header className="header">
         <div className="brand">
-          <h1><Sparkles size={24} color="var(--accent-color)" /> DeepSeek Pro</h1>
+          <h1><Sparkles size={24} color="var(--accent-color)" /> <span>DeepSeek Pro</span></h1>
         </div>
         
         <div className="header-actions">

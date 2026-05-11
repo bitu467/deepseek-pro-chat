@@ -22,7 +22,7 @@
     "rewrites": [
       {
         "source": "/api/**",
-        "function": {
+        "run": {
           "serviceId": "chat",
           "region": "us-central1"
         }
