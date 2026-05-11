@@ -2,20 +2,23 @@ const { onRequest } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
 const express = require("express");
 const cors = require("cors");
-const OpenAI = require("openai");
 
 // Initialize express for the chat endpoint
 const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-// We'll use Firebase Secrets to store the API key safely
-// Access via process.env.NVIDIA_API_KEY
-const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
+// Secrets are accessed via process.env
 const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
 
 app.post("/chat", async (req, res) => {
   const { messages, model } = req.body;
+  const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
+
+  if (!NVIDIA_API_KEY) {
+    logger.error("NVIDIA_API_KEY is missing");
+    return res.status(500).json({ error: "Server configuration error: API Key missing" });
+  }
 
   try {
     const response = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
@@ -25,11 +28,11 @@ app.post("/chat", async (req, res) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: model || "deepseek-ai/deepseek-v4-pro",
+        model: model || "meta/llama-3.3-70b-instruct",
         messages: messages,
         temperature: 1,
         top_p: 0.95,
-        max_tokens: 16384,
+        max_tokens: 4096,
         stream: true,
         chat_template_kwargs: { thinking: false }
       }),
@@ -61,9 +64,11 @@ app.post("/chat", async (req, res) => {
   }
 });
 
-// Export the function
+// Export the function with PUBLIC access enabled
 exports.chat = onRequest({ 
   secrets: ["NVIDIA_API_KEY"],
+  invoker: "public", // This allows public access to the function
   cors: true,
-  region: "us-central1" // Default region
+  region: "us-central1",
+  maxInstances: 10
 }, app);
