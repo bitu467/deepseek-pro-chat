@@ -1,20 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Bot, User, Sparkles, Loader2, ChevronDown, Sun, Moon, Columns, MessageSquare } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2, ChevronDown, Sun, Moon, Columns, MessageSquare, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
 const MODELS = [
-  { id: 'meta/llama-3.3-70b-instruct', name: 'Llama 3.3 70B' },
-  { id: 'meta/llama-3.1-8b-instruct', name: 'Llama 3.1 8B' },
-  { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B' },
-  { id: 'deepseek-ai/deepseek-v4-pro', name: 'DeepSeek V4 Pro' },
-  { id: 'deepseek-ai/deepseek-v4-flash', name: 'DeepSeek V4 Flash' }
+  { id: 'meta/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', type: 'chat' },
+  { id: 'deepseek-ai/deepseek-v4-pro', name: 'DeepSeek V4 Pro', type: 'chat' },
+  { id: 'meta/llama-3.1-405b-instruct', name: 'Llama 3.1 405B', type: 'chat' },
+  { id: 'mistralai/mistral-large-2-124b', name: 'Mistral Large 2', type: 'chat' },
+  { id: 'google/gemma-2-27b-it', name: 'Gemma 2 27B', type: 'chat' },
+  { id: 'microsoft/phi-3-medium-128k-instruct', name: 'Phi-3 Medium', type: 'chat' },
+  { id: 'black-forest-labs/flux-1-schnell', name: 'FLUX.1 (Image)', type: 'image' },
+  { id: 'stabilityai/stable-diffusion-3-5-large', name: 'SD 3.5 (Image)', type: 'image' },
+  { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B', type: 'chat' }
 ];
 
 function App() {
   const [messages, setMessages] = useState([
-    { role: 'assistant', type: 'single', content: "Hello! I'm ready. Use the toggle above to compare models side-by-side!" }
+    { role: 'assistant', type: 'single', results: { 'meta/llama-3.3-70b-instruct': "Hello! I'm ready. You can now chat with various high-end models or generate images!" } }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,19 +32,12 @@ function App() {
   const textareaRef = useRef(null);
 
   useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.remove('light-mode');
-    } else {
-      document.body.classList.add('light-mode');
-    }
+    if (isDarkMode) document.body.classList.remove('light-mode');
+    else document.body.classList.add('light-mode');
   }, [isDarkMode]);
 
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleInput = (e) => {
@@ -62,7 +59,7 @@ function App() {
 
   const streamFromModel = async (modelId, history, msgIndex) => {
     try {
-      // Point directly to Cloud Run URL to avoid Firebase Hosting rewrite issues
+      const modelInfo = MODELS.find(m => m.id === modelId);
       const response = await fetch('https://chat-fo6ezi7trq-uc.a.run.app/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,6 +67,18 @@ function App() {
       });
 
       if (!response.ok) throw new Error('Model failed');
+
+      if (modelInfo.type === 'image') {
+        const data = await response.json();
+        setMessages(prev => {
+          const newMsgs = [...prev];
+          const currentMsg = { ...newMsgs[msgIndex] };
+          currentMsg.results = { ...currentMsg.results, [modelId]: { image: data.image_url } };
+          newMsgs[msgIndex] = currentMsg;
+          return newMsgs;
+        });
+        return;
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -134,7 +143,7 @@ function App() {
     setMessages(prev => [...prev, { 
       role: 'assistant', 
       type: isCompareMode ? 'compare' : 'single',
-      results: activeModels.reduce((acc, id) => ({ ...acc, [id]: '' }), {})
+      results: activeModels.reduce((acc, id) => ({ ...acc, [id]: {} }), {})
     }]);
 
     await Promise.all(activeModels.map(modelId => streamFromModel(modelId, currentHistory, msgIndex)));
@@ -174,16 +183,12 @@ function App() {
                     }}
                   >
                     {isCompareMode && <input type="checkbox" checked={compareList.includes(model.id)} readOnly style={{ marginRight: '8px' }} />}
+                    {model.type === 'image' ? <ImageIcon size={14} style={{ marginRight: '8px' }} /> : <Bot size={14} style={{ marginRight: '8px' }} />}
                     {model.name}
                   </button>
                 ))}
               </div>
             )}
-          </div>
-          
-          <div className="status-indicator">
-            <div className={`dot ${isLoading ? 'active' : ''}`}></div>
-            <span>{isLoading ? 'Thinking...' : 'Ready'}</span>
           </div>
         </div>
       </header>
@@ -207,11 +212,15 @@ function App() {
                   {Object.entries(msg.results || {}).map(([modelId, content]) => (
                     <div key={modelId} className="message ai">
                       <div className="message-header">
-                        <Bot size={14} /> 
+                        {MODELS.find(m => m.id === modelId)?.type === 'image' ? <ImageIcon size={14} /> : <Bot size={14} />}
                         <span>{MODELS.find(m => m.id === modelId)?.name}</span>
                       </div>
                       <div className="markdown-content">
-                        <ReactMarkdown>{content || (isLoading ? '...' : '')}</ReactMarkdown>
+                        {content && content.image ? (
+                          <img src={content.image} alt="Generated" className="generated-image" />
+                        ) : (
+                          <ReactMarkdown>{content || (isLoading ? '...' : '')}</ReactMarkdown>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -231,7 +240,7 @@ function App() {
             value={input}
             onChange={handleInput}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSubmit())}
-            placeholder="Compare models..."
+            placeholder={MODELS.find(m => m.id === selectedModel)?.type === 'image' ? "Describe the image you want..." : "Ask anything..."}
           />
           <button type="submit" className="send-btn" disabled={isLoading || !input.trim()}>
             {isLoading ? <Loader2 className="animate-spin" size={20} color="#000" /> : <Send size={20} color="#000" />}
