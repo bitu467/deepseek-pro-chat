@@ -1,16 +1,80 @@
-# React + Vite
+# 🚀 DeepSeek Pro Chat
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A premium, glassmorphic AI chat application featuring **Multi-Model Comparison Mode**. Powered by NVIDIA NIM and hosted on Firebase.
 
-Currently, two official plugins are available:
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Firebase](https://img.shields.io/badge/firebase-%23039BE5.svg?style=for-the-badge&logo=firebase)
+![NVIDIA](https://img.shields.io/badge/NVIDIA-76B900?style=for-the-badge&logo=nvidia&logoColor=white)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## ✨ Features
 
-## React Compiler
+- **Side-by-Side Comparison**: Compare results from up to 3 models (DeepSeek, Llama 3.3, etc.) simultaneously in a responsive grid.
+- **Premium Glassmorphic UI**: Sleek, modern interface with real-time blur effects and smooth animations.
+- **Dark & Light Mode**: Fully supported dynamic theme switching.
+- **Streaming Responses**: Real-time word-by-word streaming for a natural conversation feel.
+- **Mobile Optimized**: Responsive design specifically tuned for extra-small devices (like iPhone SE).
+- **Secure Backend**: Firebase Cloud Functions (Cloud Run) proxy to protect API keys and handle CORS.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🤖 Supported Models (via NVIDIA NIM)
 
-## Expanding the ESLint configuration
+- **DeepSeek V4 Pro / Flash**
+- **Meta Llama 3.3 70B**
+- **Meta Llama 3.1 8B**
+- **GPT-OSS 20B**
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🛠️ Tech Stack
+
+- **Frontend**: React, Vite, Framer Motion, Lucide Icons, React Markdown.
+- **Backend**: Firebase Functions v2 (Express), Google Cloud Run.
+- **Hosting**: Firebase Hosting with CI/CD via GitHub Actions.
+- **AI Infrastructure**: NVIDIA NIM API.
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- Firebase CLI
+- NVIDIA NIM API Key
+
+### Installation
+
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/bitu467/deepseek-pro-chat.git
+   cd deepseek-pro-chat
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   cd functions && npm install && cd ..
+   ```
+
+3. **Configure Environment**
+   Create a `.env` file in the root:
+   ```env
+   NVIDIA_API_KEY=your_key_here
+   ```
+
+4. **Local Development**
+   ```bash
+   npm run dev
+   ```
+
+## 📦 Deployment
+
+The project is configured with **GitHub Actions**. Any push to the `main` branch will automatically build and deploy to Firebase Hosting and Functions.
+
+### Manual Deployment
+```bash
+firebase deploy
+```
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+Built with ❤️ by [bitu467](https://github.com/bitu467)
