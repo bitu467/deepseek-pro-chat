@@ -62,7 +62,8 @@ function App() {
 
   const streamFromModel = async (modelId, history, msgIndex) => {
     try {
-      const response = await fetch('/api/chat', {
+      // Point directly to Cloud Run URL to avoid Firebase Hosting rewrite issues
+      const response = await fetch('https://chat-fo6ezi7trq-uc.a.run.app/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: history, model: modelId }),
